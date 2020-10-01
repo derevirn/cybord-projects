@@ -19,8 +19,6 @@ def img_to_np(path, resize = True):
     images = np.array(img_array)
     return images
 
-
-
 def detector_fit(path):
     path += '/*.*'
     train = img_to_np(path)
@@ -65,3 +63,12 @@ def detector_fit(path):
                 return_feature_score=True)
     
     return preds
+
+def write_outlier_img(preds, input_path, output_path):
+    input_path += '/*.*'
+    img_full = img_to_np(input_path, resize=False)
+    
+    for i, pred in enumerate(preds['data']['is_outlier']):
+        if(pred == 1):
+            img = Image.fromarray(img_full[i])
+            img = img.save(output_path + '/' + str(i) + ".jpg")

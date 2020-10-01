@@ -1,45 +1,77 @@
-from tkinter import Tk, Label, Button, filedialog, StringVar
-from outlier_ae import detector_fit
+from tkinter import Tk, Label, Button, filedialog, StringVar, Entry, messagebox
+from tkinter import ttk
+from outlier_ae import detector_fit, write_outlier_img
 from collections import Counter
 
-def browse_button():
+def browse_button(path):
     #global folder_path
     filename = filedialog.askdirectory()
-    folder_path.set(filename)
+    path.set(filename)
     
-def train_button():
-    preds = detector_fit(folder_path.get())
-    counter = Counter(preds['data']['is_outlier'])
-    outliers = dict(counter)
-    outliers_str.set("Number of outliers: " + str(outliers[1]))
+def run_button():
+    #checking if input and output paths have been set
+    if (len(input_path.get()) == 0) or (len(output_path.get()) == 0):
+        messagebox.showerror(title='Error', message='Please select the folders')
+        
+    else:        
+        messagebox.showinfo(title='Info',
+                            message='Please wait while the detector is being trained')
+       
+        preds = detector_fit(input_path.get())
+        write_outlier_img(preds, input_path.get(), output_path.get())
+        status_str.set('The outlier images have been saved in the output folder!')
     
+
 
 window = Tk()
+ttk.Style().theme_use('clam')
 window.title("Anomaly Detection")
-window.geometry('800x600')
+window.geometry('640x320')
 
-
-title = Label(window, text="Anomaly Detection App", font=('Arial', 24))
+title = Label(window, text="Outlier Detection App", font=('Arial', 22))
 title.place(x=10, y=10)
 
-folder_path = StringVar(window)
-folder_lbl = Label(window, textvariable=folder_path, font=('Arial', 16))
-folder_lbl.place(x=10, y=80)
+#Input folder widgets
+input_label = Label(window, text="Input Folder:", font=('Arial',10))
+input_label.place(x=10, y=80)
 
-outliers_str = StringVar(window)
-outliers_lbl = Label(window, textvariable=outliers_str, font=('Arial', 16))
-outliers_lbl.place(x=10, y=120)
+input_path = StringVar(window)
+input_field = Entry(window, textvariable=input_path, font=('Arial', 16),
+                     width=30)
+input_field.place(x=100, y=80)
 
-browse_btn = Button(text="Select Folder", command=browse_button,
-                    font=('Arial', 12),
-                    height=4, width=20)
-browse_btn.place(x=500, y=50)
+input_btn = Button(text="Open", command=lambda: browse_button(input_path),
+                    font=('Arial'),
+                    height=1, width=10)
+input_btn.place(x=480, y=77)
+
+#Output folder widgets
+output_label = Label(window, text="Output Folder:", font=('Arial',10))
+output_label.place(x=10, y=160)
+
+output_path = StringVar(window)
+output_field = Entry(window, textvariable=output_path, font=('Arial', 16),
+                     width=30)
+output_field.place(x=100, y=160)
+
+output_btn = Button(text="Open", command=lambda: browse_button(output_path),
+                    font=('Arial'),
+                    height=1, width=10)
+output_btn.place(x=480, y=157)
 
 
-train_btn = Button(window, text="Click to train the detector", command=train_button,
+#Status label
+status_str = StringVar(window)
+status_str.set("Select the input and output folder to detect the outlier images.")
+status_label = Label(window, textvariable=status_str, font=('Arial', 12))
+status_label.place(x=10, y=245)
+
+
+#Run button
+run_btn = Button(window, text="Run", command=run_button,
                    font=('Arial', 12),
-                   height=4, width=20)
-train_btn.place(x=500, y=450)
+                   height=1, width=10)
+run_btn.place(x=480, y=240)
 
 window.mainloop()
 
