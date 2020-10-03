@@ -1,10 +1,12 @@
 import pandas as pd
 import numpy as np
-from collections import Counter
 from PIL import Image
+import os
 import glob
+import shutil
 import tensorflow as tf
-from tensorflow.keras.layers import Conv2D, Conv2DTranspose, UpSampling2D,    Dense, Layer, Reshape, InputLayer, Flatten, Input, MaxPooling2D
+from tensorflow.keras.layers import Conv2D, Conv2DTranspose, UpSampling2D, \
+     Dense, Layer, Reshape, InputLayer, Flatten, Input, MaxPooling2D
 from alibi_detect.od import OutlierAE
 from alibi_detect.utils.visualize import plot_instance_score, plot_feature_outlier_image
 
@@ -14,13 +16,13 @@ def img_to_np(path, resize = True):
     fpaths = glob.glob(path)
     for fname in fpaths:
         img = Image.open(fname).convert("RGB")
-        if(resize): img = img.resize((64,64))
+        if(resize): img = img.resize((32,32))
         img_array.append(np.asarray(img))
     images = np.array(img_array)
     return images
 
 def detector_fit(path):
-    path += '/*.*'
+    path += '\\*.*'
     train = img_to_np(path)
     train = train.astype('float32') / 255.
     print(train.shape)
@@ -39,8 +41,8 @@ def detector_fit(path):
     decoder_net = tf.keras.Sequential(
       [
           InputLayer(input_shape=(encoding_dim,)),
-          Dense(8*8*128),
-          Reshape(target_shape=(8, 8, 128)),
+          Dense(4*4*128),
+          Reshape(target_shape=(4, 4, 128)),
           Conv2DTranspose(256, 4, strides=2, padding='same', activation=tf.nn.relu),
           Conv2DTranspose(64, 4, strides=2, padding='same', activation=tf.nn.relu),
           Conv2DTranspose(3, 4, strides=2, padding='same', activation='sigmoid')
@@ -50,12 +52,12 @@ def detector_fit(path):
     # initialize outlier detector
     od = OutlierAE( threshold = 0.001,
                     encoder_net=encoder_net,
-                    decoder_net=decoder_net,)
+                    decoder_net=decoder_net)
     
     adam = tf.keras.optimizers.Adam(lr=1e-4)
     
     # train
-    od.fit(train, epochs=100, verbose=True,
+    od.fit(train, epochs=150, verbose=True,
            optimizer = adam)
     
     preds = od.predict(train, outlier_type='instance',
@@ -64,11 +66,24 @@ def detector_fit(path):
     
     return preds
 
-def write_outlier_img(preds, input_path, output_path):
-    input_path += '/*.*'
-    img_full = img_to_np(input_path, resize=False)
+def write_output(preds, input_path, output_path):
+    input_path += '\*.*'
+    file_paths = glob.glob(input_path)
     
-    for i, pred in enumerate(preds['data']['is_outlier']):
-        if(pred == 1):
-            img = Image.fromarray(img_full[i])
-            img = img.save(output_path + '/' + str(i) + ".jpg")
+    #writing images
+    for i, path in enumerate(file_paths):
+        if(preds['data']['is_outlier'][i] == 1):
+            source = path
+            shutil.copy(source, output_path)
+    
+    #writing CSV files
+    file_names = [os.path.basename(item) for item in file_paths]
+
+    dict1 = {'Filename': file_names,
+     'instance_score': preds['data']['instance_score'],
+     'is_outlier': preds['data']['is_outlier']}
+     
+    df = pd.DataFrame(dict1)
+    df = df[df['is_outlier'] == 1]
+    df.to_csv(output_path + '\\outliers.csv', index=False)
+    
