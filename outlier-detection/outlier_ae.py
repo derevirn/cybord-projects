@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from PIL import Image
 import os
-import glob
 import shutil
 import tensorflow as tf
 from tensorflow.keras.layers import Conv2D, Conv2DTranspose, UpSampling2D, \
@@ -10,10 +9,19 @@ from tensorflow.keras.layers import Conv2D, Conv2DTranspose, UpSampling2D, \
 from alibi_detect.od import OutlierAE
 from alibi_detect.utils.visualize import plot_instance_score, plot_feature_outlier_image
 
+def get_file_paths(path):
+    file_paths = []
+    for p in os.listdir(path):
+        full_path = os.path.join(path, p)
+        if os.path.isfile(full_path):
+            file_paths.append(full_path)
+    
+    return file_paths
+
 
 def img_to_np(path, resize = True):  
     img_array = []
-    fpaths = glob.glob(path)
+    fpaths = get_file_paths(path)
     for fname in fpaths:
         img = Image.open(fname).convert("RGB")
         if(resize): img = img.resize((32,32))
@@ -22,7 +30,6 @@ def img_to_np(path, resize = True):
     return images
 
 def detector_fit(path):
-    path += '\\*.*'
     train = img_to_np(path)
     train = train.astype('float32') / 255.
     print(train.shape)
@@ -67,8 +74,7 @@ def detector_fit(path):
     return preds
 
 def write_output(preds, input_path, output_path):
-    input_path += '\*.*'
-    file_paths = glob.glob(input_path)
+    file_paths = get_file_paths(input_path)
     
     #writing images
     for i, path in enumerate(file_paths):

@@ -1,14 +1,14 @@
 from tkinter import Tk, Label, Button, filedialog, StringVar, Entry, messagebox
 from tkinter import ttk
 from outlier_ae import detector_fit, write_output
-from os.path import isdir
+from os.path import isdir,normpath
 import tensorflow as tf
 
 
 def browse_button(path):
     #global folder_path
     filename = filedialog.askdirectory()
-    path.set(filename)
+    path.set(normpath(filename))
     
 def run_button():
     #checking if input and output paths have been set
