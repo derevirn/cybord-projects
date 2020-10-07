@@ -13,6 +13,10 @@ def get_file_paths(path):
     file_paths = []
     for p in os.listdir(path):
         full_path = os.path.join(path, p)
+        
+        if (len(full_path) > 260) and (full_path[0] != "\\"):
+            full_path = "\\\\?\\" + full_path
+        
         if os.path.isfile(full_path):
             file_paths.append(full_path)
     
